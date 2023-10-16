@@ -1,5 +1,21 @@
+// server.js
+// where your node app starts
+
+// init project
 var express = require('express');
 var app = express();
+
+// enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
+// so that your API is remotely testable by FCC 
+var cors = require('cors');
+app.use(cors({
+  optionsSuccessStatus: 200
+})); // some legacy browsers choke on 204
+
+// http://expressjs.com/en/starter/static-files.html
+app.use(express.static('public'));
+
+// http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function(req, res) {
   res.sendFile(__dirname + '/views/index.html');
 });
@@ -7,38 +23,60 @@ app.get("/", function(req, res) {
 
 // your first API endpoint... 
 app.get("/api/hello", function(req, res) {
-  res.json({ greeting: 'hello API' });
+  res.json({
+    greeting: 'hello API'
+  });
 });
 
-app.get('/api/:date?', function(req, res) {
-  var date_string = req.params.date_string;
-  var date;
+app.get("/api/timestamp/", (req, res) => {
+  res.json({
+    unix: Date.now(),
+    utc: Date()
+  });
+});
 
-  // If the date_string is empty, use the current date                                                                                                                                                                                                                                                                                                                           
-  if (!date_string) {
-    date = new Date();
+
+
+app.get("/api/:date_string", (req, res) => {
+  let dateString = req.params.date_string;
+
+  //A 4 digit number is a valid ISO-8601 for the beginning of that year
+  //5 digits or more must be a unix time, until we reach a year 10,000 problem
+  if (/\d{5,}/.test(dateString)) {
+    const dateInt = parseInt(dateString);
+    //Date regards numbers as unix timestamps, strings are processed differently
+    res.json({
+      unix: dateInt,
+      utc: new Date(dateInt).toUTCString()
+    });
   } else {
-    // If the date_string is not empty, try to create a Date object with the date_string                                                                                                                                                                                                                                                                                         
-    // Check if it's a unix timestamp                                                                                                                                                                                                                                                                                                                                            
-    var timestamp = parseInt(date_string);
-    if (!isNaN(timestamp)) {
-      // It's a unix timestamp (in milliseconds)                                                                                                                                                                                                                                                                                                                                 
-      date = new Date(timestamp);
+    let dateObject = new Date(dateString);
+
+
+
+    if (dateObject.toString() === "Invalid Date") {
+      res.json({
+        error: "Invalid Date"
+      });
     } else {
-      // It's a string date                                                                                                                                                                                                                                                                                                                                                      
-      date = new Date(date_string);
+      res.json({
+        unix: dateObject.valueOf(),
+        utc: dateObject.toUTCString()
+      });
     }
   }
-
-  // If the date is invalid, return an error                                                                                                                                                                                                                                                                                                                                     
-  if (isNaN(date.getTime())) {
-    res.json({ "error": "Invalid Date" });
-  } else {
-    res.json({ "unix": date.getTime(), "utc": date.toUTCString() });
-  }
 });
 
-// listen for requests :)                                                                                                                                                                                                                                                                                                                                                        
+
+app.get('/api', (req, res) => {
+  res.json({
+    unix: Date.now(),
+    utc: Date()
+  })
+
+})
+
+// listen for requests :)
 var listener = app.listen(process.env.PORT, function() {
   console.log('Your app is listening on port ' + listener.address().port);
-});                                                                                                                                                                                                                                                                                                                                                                              
+});
